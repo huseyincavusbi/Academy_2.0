@@ -1,0 +1,298 @@
+---
+title: "Academy 2.0, Homework 4"
+author: "Hüseyin Çavuş"
+date: "2024-03-27"
+output:
+  html_document:
+    df_print: paged
+  word_document: default
+  pdf_document: default
+ R 4.3.3
+ ggplot2 3.5.0
+ dplyr 1.1.4
+ tidyverse 2.0.0
+ lmtest 0.0-40
+ rpart 4.1.23
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+#1
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+mouses <- read.csv("https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/femaleMiceWeights.csv")
+View(mouses)
+print(mouses)
+
+# separation by diet types
+chow <- seq(1, 12)
+high_fat <- seq(13, 24)
+
+boxplot(mouses$Bodyweight~mouses$Diet, xlab = "Diet", ylab = "Bodyweight", main = "Bodyweight by Diet")
+
+choww <- filter(mouses, Diet=="chow") # filering chow diet data
+View(choww)
+
+hff <- filter(mouses, Diet=="hf") # filering high fat diet data
+View(hff)
+
+
+chw_plt <- ggplot(choww, aes(x = Bodyweight)) +
+  geom_density(aes(fill = "red"), linetype = "solid", linewidth = 2) +
+  labs(title = "Bodyweight Density for Chow Diet", x = "Bodyweight", y = "Density") +
+  theme_dark()  
+
+hf_plt <- ggplot(hff, aes(x = Bodyweight)) +
+  geom_density(aes(fill = ""), linetype = "solid", linewidth = 2) +  
+  labs(title = "Bodyweight Density for High Fat Diet", x = "Bodyweight", y = "Density") +
+  scale_fill_manual(values = "blue") # manual color selection
+  theme_minimal() # aes fill part problematic or normal??
+
+print(chw_plt)
+print(hf_plt)
+
+ggplot(choww, aes(x = Bodyweight)) +
+  geom_density(aes(fill = "Chow Diet", color = "Chow"), linetype = "longdash", linewidth = 3) +
+  geom_density(data = hff, aes(fill = "High Fat Diet", color = "High Fat", alpha = 0.7), linetype = "solid", linewidth = 2) +
+  labs(title = "Bodyweight Density for Different Diets", x = "Bodyweight", y = "Density") +
+  scale_fill_manual(values = c("red", "blue")) +
+  scale_color_manual(values = c("black", "black"))
+
+# alpha changes the transparency of the density plot
+```
+
+#2
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+set.seed(33333)
+mouses2 <- read.csv("https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/femaleMiceWeights.csv")
+
+activ <- as.numeric(c("20", "50", "100")) # activity levels represented by 20 for low activity, 50 for medium activity, and 100 for high activity and used as numeric values instead of strings for calculating correlation
+prb <- c(0.3, 0.5, 0.2) # probability of each activity level
+
+activ <- sample(activ, nrow(mouses2)[1], replace = TRUE, prob = prb) 
+mouses2$Activity <- activ
+View(mouses2)
+
+correlation <- cor(mouses2$Bodyweight, mouses2$Activity)
+print(correlation) # -0.06073346
+
+df <- data.frame(
+  x = mouses2$Bodyweight,
+  y = mouses2$Activity
+) # creating a data frame for ease and readability
+
+#  ggplot2 for plotting the data
+ggplot(df, aes(x, y)) + 
+  geom_point() + 
+  geom_smooth(method = "lm", se = FALSE) + 
+  labs(x = "Bodyweight", y = "Activity") + 
+  theme_classic() + 
+  annotate("text", x = 25, y = 105, label = paste("Correlation coefficient: ", round(correlation, 2)))
+
+#  round() to two decimal places
+model <- lm(mouses2$Bodyweight ~ mouses2$Activity) # linear model
+summary(model) 
+```
+
+Residuals: (The difference between the predicted value and the actual value for each data point)
+
+(Low median residual value -estimates are close to the actual values-)
+
+Coefficients:
+
+When mouse activity is equal to zero, the estimated weight -intercept- is
+
+27.48729, high t value -indicates intercept different than zero- with extremely low p-value, low Std. Error -reliable estimate-) (One unit increase in activity affects weight by -0.03994 units, low t value with high p-value -may not be significant-, low Std. Error -reliable estimate-) --- Signif. codes: 0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 3.775 on 22 degrees of freedom (Medium-high residual standard error with medium-high degrees of freedom) Multiple R-squared: 0.07783, Adjusted R-squared: -0.03591 (Low r-squared values, the model can explain only 7.78% of the variance of the dependent variable -activity-) F-statistic: 1.857 on 1 and 22 DF, p-value: 0.1868 (Low F-statistic with high p-value -model may not be significant-)
+
+#3
+
+```{r}
+library(tidyverse)
+library(lmtest)
+
+mouses3 <- read.csv("https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/femaleMiceWeights.csv")
+View(mouses3)
+
+set.seed(123) 
+mouses3 <- mouses3[sample(nrow(mouses3)), ] # sampling rows and reordering them randomly
+
+mouses3$Sex[1:12] <- "Male" # select male
+mouses3$Sex[13:24] <- "Female" # select female
+
+mouses3$Sex <- factor(mouses3$Sex)
+View(mouses3)
+str(mouses3)
+
+table(mouses3$Sex) # table of data, there are 14 females and 10 males
+sum(mouses3$Sex == "Female")
+sum(mouses3$Sex == "Male")
+typeof(mouses3$Sex)
+
+
+model <- lm(Bodyweight ~ Diet * Sex, data = mouses3) # linear model with interaction term, Diet and Sex interaction, also their interaction with weight
+summary(model)
+```
+
+Average diet and average body weight estimated for the female sex is 25.0560 Intercept different from zero with low p value, low standard error, and high t value.
+
+Diethf is the effect of hf diet type on body weight SexMale is the effect of male gender on body weight but has a low t value and high p value, may not be significant. Diethf:SexMale is the combined effect of diet type and male sex on body weight They are all have low t values and high p values, may not be significant.
+
+Residual Standard Error is 3.62 on 20 degrees of freedom (medium-high residual standard error with medium-high degrees of freedom) Multiple R-squared: 0.2292, Adjusted R-squared: 0.1136 (low r-squared values, the model can explain only 22.92% of the variance) F-statistic: 1.982 on 3 and 20 DF, p-value: 0.1491 (low F-statistic with high p-value, model may not be significant)
+
+#4
+
+```{r}
+mouses4 <- read.csv("https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/femaleMiceWeights.csv")
+View(mouses4)
+summary(mouses4)
+
+set.seed(1)
+
+mouses4$Weights_March <- mouses4$Bodyweight # creating a new column for March weights with default weight values
+mouses4 <- subset(mouses4, select = -Bodyweight) # removing the Bodyweight column
+
+june <- round(rnorm(nrow(mouses4), mean = 25, sd = 3), 2)
+mouses4$Weights_June <- june # creating a new column for June weights with random values
+
+sept <- round(rnorm(nrow(mouses4), mean = 25, sd = 5), 2)
+mouses4$Weights_September <- sept # for September 
+
+dec <- round(rnorm(nrow(mouses4), mean = 25, sd = 4), 2)
+mouses4$Weights_December <- dec # for December
+
+summary(mouses4)
+head(mouses4)
+
+# converting our columns to time series objects 
+mouses4$Weights_March_ts <- ts(mouses4$Weights_March, start = c(1), frequency = 3) 
+mouses4$Weights_June_ts <- ts(mouses4$Weights_June, start = c(1), frequency = 3)
+mouses4$Weights_September_ts <- ts(mouses4$Weights_September, start = c(1), frequency = 3)
+mouses4$Weights_December_ts <- ts(mouses4$Weights_December, start = c(1), frequency = 3)
+
+# creating linear regression models representing the linear trends that best fits the time series datas for each obvervation month
+trend_march <- lm(mouses4$Weights_March_ts ~ time(mouses4$Weights_March_ts))
+trend_june <- lm(mouses4$Weights_June_ts ~ time(mouses4$Weights_June_ts))
+trend_september <- lm(mouses4$Weights_September_ts ~ time(mouses4$Weights_September_ts))
+trend_december <- lm(mouses4$Weights_December_ts ~ time(mouses4$Weights_December_ts))
+
+# plotting the time series data with the linear trends
+plot(mouses4$Weights_March_ts, main = "Weights in March with Trend") # visualising the data for the month of interest and finding the total monthly trend
+abline(trend_march, col = "red") # adding the trend line to the plot
+
+plot(mouses4$Weights_June_ts, main = "Weights in June with Trend")
+abline(trend_june, col = "blue")
+
+plot(mouses4$Weights_September_ts, main = "Weights in September with Trend")
+abline(trend_september, col = "purple")
+
+plot(mouses4$Weights_December_ts, main = "Weights in December with Trend")
+abline(trend_december, col = "green")
+
+summary(trend_march) # summary of the linear regression model for March
+
+
+mouse1 <- mouses4[3, c("Weights_March", "Weights_June", "Weights_September", "Weights_December")] # selecting 3rd mouse and its weight data for each month
+
+mouse1_vector <- as.numeric(mouse1) # converting the data to a numeric vector
+
+mouse1_ts <- ts(mouse1_vector, start = c(1), frequency = 3) # converting the vector to a time series object
+
+plot(mouse1_ts, type = "o", main = "Time Series of Mouse 1", xlab = "Time", ylab = "Bodyweight") # type is overplotted
+abline(lm(mouse1_ts ~ time(mouse1_ts)), col = "red") # trend line 
+
+
+random_mouse <- sample(1:nrow(mouses4), 1)  # selecting a random mouse
+print(random_mouse)
+
+mouse_R <- mouses4[random_mouse, c("Weights_March", "Weights_June", "Weights_September", "Weights_December")]
+
+mouse_R_vector <- as.numeric(mouse_R)
+mouse_R_ts <- ts(mouse_R_vector, start = c(1), frequency = 4)
+time(mouse_R_ts) # times of the object
+
+plot(mouse_R_ts, type = "b", pch = 16, col = "blue", main = paste("Time Series of mouse", random_mouse), xlab = "Time", ylab = "Bodyweight", xaxt = "n") # main and pasta use for being able to printing the actual number of randomly selected mice, type is both points and lines, pch is the shape of the points, xaxt = "n" removes the x-axis
+
+# Trying to add the months correctly to the x-axis
+mtext("March", side = 1, line = 0.1, at = 1, las = 1) # las = 1 for horizontal labels
+mtext("June", side = 1, line = 0.1, at = 1.25, las = 1)
+mtext("September", side = 1, line = 0.5, at = 1.50, las = 1)
+mtext("December", side = 1, line = 0.5, at = 1.75, las = 1)
+
+axis(1, at = 1:4, labels = c("March", "June", "September", "December"))
+abline(lm(mouse_R_ts ~ time(mouse_R_ts)), col = "red")
+
+
+```
+
+#5
+
+```{r}
+library(rpart)
+library(tidyverse)
+
+set.seed(9999)
+
+mouses5 <- read.csv("https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/femaleMiceWeights.csv")
+
+mouses5 <- as.data.frame(mouses5) # converting the data to a data frame
+model <- rpart(Diet ~ ., data = mouses5) # creating a decision tree model
+print(model)
+
+# print the labels of the nodes on the plot
+summary(model)
+options(repr.plot.width=1, repr.plot.height=1)
+
+```
+
+n= 24 (there are 24 nodes in the tree)
+
+node), split, n, loss, yval, (yprob) \* denotes terminal node
+
+1)  root 24 12 chow (0.5000000 0.5000000) (root node -node id:1- with 24 observations, 12 chow and 12 hf, 0.5 probability for each)
+
+2)  Bodyweight\< 24.505 11 3 chow (0.7272727 0.2727273) \* (node id:2, branch node with 11 observations, 3 chow and 8 hf, 0.727 probability for chow and 0.273 probability for hf)
+
+3)  Bodyweight\>=24.505 13 4 hf (0.3076923 0.6923077) \* (node id:3, branch node with 13 observations, 4 hf and 9 chow, 0.308 probability for hf and 0.692 probability for chow)
+
+Call: rpart(formula = Diet \~ ., data = mouses5) n= 24
+
+```         
+     CP nsplit rel error   xerror      xstd
+```
+
+1 0.4166667 0 1.0000000 1.333333 0.1924501 2 0.0100000 1 0.5833333 0.750000 0.1976424
+
+(Low complexity parameter -CP- values, the model may be overfitting, excellent rel error value -training error rate- and medium? xerror -test error rate- value -model may not be significant-)
+
+Variable importance Bodyweight 100 (The importance of the variable "Bodyweight" is 100%)
+
+Node number 1: 24 observations, complexity param=0.4166667 predicted class=chow expected loss=0.5 P(node) =1 class counts: 12 12 probabilities: 0.500 0.500 left son=2 (11 obs) right son=3 (13 obs) // left and right branches Primary splits: Bodyweight \< 24.505 to the left, improve=2.097902, (0 missing) // the best split point for the first node, If "Bodyweight" is less than 24.505, it goes to the left node (Node 2), otherwise it goes to the right node (Node 3)
+
+Node number 2: 11 observations predicted class=chow expected loss=0.2727273 P(node) =0.4583333 (approximately 27% of the observations at the node 2 are expected to be misclassified and the proportion of the node in the whole tree is 45.83%)
+
+```         
+class counts:     8     3 (chow and hf)
+```
+
+probabilities: 0.727 0.273 (probabilities of chow and hf)
+
+Node number 3: 13 observations predicted class=hf expected loss=0.3076923 P(node) =0.5416667 (misclassification rate is 30.77% and the proportion of the node is 54.17%)
+
+```         
+class counts:     4     9 (hf and chow)
+```
+
+probabilities: 0.308 0.692 (probabilities of hf and chow)
