@@ -14,7 +14,7 @@ output:
  forecast 8.22.0
 ---
 
-HW4.1
+HW5.1
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
@@ -55,7 +55,7 @@ mean of x mean of y
  > FertB is better than FertA according to sample estimates.
 ```
 
-## HW4.2
+## HW5.2
 ```{r}
 
 ## 1 Histogram
